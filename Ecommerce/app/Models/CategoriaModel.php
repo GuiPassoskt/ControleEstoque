@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Entities\Categoria;
 use App\Models\BaseModel;
 
 class CategoriaModel extends BaseModel
@@ -11,27 +12,32 @@ class CategoriaModel extends BaseModel
 	protected $primaryKey           = 'id';
 	protected $useAutoIncrement     = true;
 	protected $insertID             = 0;
-	protected $returnType           = 'array';
-	protected $useSoftDeletes       = false;
+	protected $returnType           = Categoria::class;
+	protected $useSoftDeletes       = true;
 	protected $protectFields        = true;
 	protected $allowedFields        = [
-		'produtoNome',
-		'produtoTipo',
-		'tamanho',
-		'divisoria',
-		'valor'
+		'nome',
+		'ativo'
 	];
 
 	// Dates
-	protected $useTimestamps        = false;
+	protected $useTimestamps        = true;
 	protected $dateFormat           = 'datetime';
 	protected $createdField         = 'criado_em';
 	protected $updatedField         = 'atualizado_em';
 	protected $deletedField         = 'excluido_em';
 
 	// Validation
-	protected $validationRules      = [];
-	protected $validationMessages   = [];
+	protected $validationRules      = [
+		'nome' => 'required|min_length[5]|max_length[255]'
+	];
+	protected $validationMessages   = [
+		'nome' => [
+			'required' => 'Informe o nome da categoria',
+			'min_length' => 'O nome da categoria deve ter no mínimo 5 caracteres',
+			'max_length' => 'O nome da categoria deve ter no máximo 255 caracteres'
+		]
+	];
 	protected $skipValidation       = false;
 	protected $cleanValidationRules = true;
 
@@ -45,4 +51,9 @@ class CategoriaModel extends BaseModel
 	protected $afterFind            = [];
 	protected $beforeDelete         = [];
 	protected $afterDelete          = [];
+
+	public function ativas(): array
+	{
+		return $this->where('ativo', 1)->orderBy('nome')->findAll();
+	}
 }

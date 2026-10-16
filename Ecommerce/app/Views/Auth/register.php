@@ -4,15 +4,71 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Registre-se no sistema</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW" crossorigin="anonymous"></script>
+    <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            padding-top: 40px;
+            padding-bottom: 40px;
+            background-color: #f5f5f5;
+        }
+
+        .form-signin {
+            width: 100%;
+            max-width: 330px;
+            padding: 15px;
+            margin: auto;
+        }
+
+        .form-signin .checkbox {
+            font-weight: 400;
+        }
+
+        .form-signin .form-control {
+            position: relative;
+            box-sizing: border-box;
+            height: auto;
+            padding: 10px;
+            font-size: 16px;
+        }
+
+        .form-signin .form-control:focus {
+            z-index: 2;
+        }
+
+        .form-signin input[type="email"] {
+            margin-bottom: -1px;
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .form-signin input[type="password"] {
+            margin-bottom: 10px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+    </style>
 </head>
-<body>
-    <h1>Register</h1>
-    <form action="/auth/register" method="post">
-        <input type="text" name="name" placeholder="Nome">
-        <input type="text" name="email" placeholder="E-mail">
-        <input type="text" name="password" placeholder="Senha">
-        <button>Cadastrar</button>
-    </form>
+<body class="text-center">
+    <main class="form-signin">
+        <form action="<?php echo base_url('/auth/registro') ?>" method="post">
+            <?php echo csrf_field() ?>
+            <img class="mb-4" src="<?php echo base_url('assets/images/logo-utopia.jpeg') ?>" alt="" width="150" height="150">
+            <h1 class="h3 mb-3 fw-normal">Por favor, registre-se</h1>
+            <input type="text" name="nome" class="form-control" placeholder="Nome" required>
+            <input type="email" name="email" class="form-control" placeholder="E-mail" required>
+            <input type="password" name="password" class="form-control" placeholder="Senha" required>
+            <button class="w-100 btn btn-lg btn-primary" type="submit">Cadastrar</button>
+            <p class="mt-5 mb-3 text-muted">&copy; 2017-2020 - Dicas CodeIgniter</p>
+        </form>
+    </main>
 </body>
 </html>

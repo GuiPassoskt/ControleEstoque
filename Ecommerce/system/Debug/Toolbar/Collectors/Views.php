@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,7 +14,6 @@
 namespace CodeIgniter\Debug\Toolbar\Collectors;
 
 use CodeIgniter\View\RendererInterface;
-use Config\Services;
 
 /**
  * Views collector
@@ -60,9 +61,9 @@ class Views extends BaseCollector
     protected $title = 'Views';
 
     /**
-     * Instance of the Renderer service
+     * Instance of the shared Renderer service
      *
-     * @var RendererInterface
+     * @var RendererInterface|null
      */
     protected $viewer;
 
@@ -73,12 +74,9 @@ class Views extends BaseCollector
      */
     protected $views = [];
 
-    /**
-     * Constructor.
-     */
-    public function __construct()
+    private function initViewer(): void
     {
-        $this->viewer = Services::renderer();
+        $this->viewer ??= service('renderer');
     }
 
     /**
@@ -87,6 +85,8 @@ class Views extends BaseCollector
      */
     protected function formatTimelineData(): array
     {
+        $this->initViewer();
+
         $data = [];
 
         $rows = $this->viewer->getPerformanceData();
@@ -121,8 +121,9 @@ class Views extends BaseCollector
      */
     public function getVarData(): array
     {
-        return [
+        $this->initViewer();
 
+        return [
             'View Data' => $this->viewer->getData(),
         ];
     }
@@ -132,6 +133,8 @@ class Views extends BaseCollector
      */
     public function getBadgeValue(): int
     {
+        $this->initViewer();
+
         return count($this->viewer->getPerformanceData());
     }
 

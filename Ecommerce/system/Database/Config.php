@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,10 +14,11 @@
 namespace CodeIgniter\Database;
 
 use CodeIgniter\Config\BaseConfig;
-use InvalidArgumentException;
+use CodeIgniter\Exceptions\InvalidArgumentException;
+use Config\Database as DbConfig;
 
 /**
- * Class Config
+ * @see \CodeIgniter\Database\ConfigTest
  */
 class Config extends BaseConfig
 {
@@ -36,10 +39,11 @@ class Config extends BaseConfig
     protected static $factory;
 
     /**
-     * Creates the default
+     * Returns the database connection
      *
-     * @param array|string $group     The name of the connection group to use, or an array of configuration settings.
-     * @param bool         $getShared Whether to return a shared instance of the connection.
+     * @param array|BaseConnection|non-empty-string|null $group     The name of the connection group to use,
+     *                                                              or an array of configuration settings.
+     * @param bool                                       $getShared Whether to return a shared instance of the connection.
      *
      * @return BaseConnection
      */
@@ -53,16 +57,20 @@ class Config extends BaseConfig
         if (is_array($group)) {
             $config = $group;
             $group  = 'custom-' . md5(json_encode($config));
-        }
+        } else {
+            $dbConfig = config(DbConfig::class);
 
-        $config ??= config('Database');
+            if ($group === null) {
+                $group = (ENVIRONMENT === 'testing') ? 'tests' : $dbConfig->defaultGroup;
+            }
 
-        if (empty($group)) {
-            $group = ENVIRONMENT === 'testing' ? 'tests' : $config->defaultGroup;
-        }
+            assert(is_string($group));
 
-        if (is_string($group) && ! isset($config->{$group}) && strpos($group, 'custom-') !== 0) {
-            throw new InvalidArgumentException($group . ' is not a valid database connection group.');
+            if (! isset($dbConfig->{$group})) {
+                throw new InvalidArgumentException('"' . $group . '" is not a valid database connection group.');
+            }
+
+            $config = $dbConfig->{$group};
         }
 
         if ($getShared && isset(static::$instances[$group])) {
@@ -71,13 +79,9 @@ class Config extends BaseConfig
 
         static::ensureFactory();
 
-        if (isset($config->{$group})) {
-            $config = $config->{$group};
-        }
-
         $connection = static::$factory->load($config, $group);
 
-        static::$instances[$group] = &$connection;
+        static::$instances[$group] = $connection;
 
         return $connection;
     }
@@ -122,17 +126,21 @@ class Config extends BaseConfig
     /**
      * Returns a new instance of the Database Seeder.
      *
+     * @param non-empty-string|null $group
+     *
      * @return Seeder
      */
     public static function seeder(?string $group = null)
     {
-        $config = config('Database');
+        $config = config(DbConfig::class);
 
         return new Seeder($config, static::connect($group));
     }
 
     /**
      * Ensures the database Connection Manager/Factory is loaded and ready to use.
+     *
+     * @return void
      */
     protected static function ensureFactory()
     {

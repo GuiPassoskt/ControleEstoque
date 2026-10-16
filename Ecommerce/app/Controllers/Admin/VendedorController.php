@@ -13,7 +13,7 @@ class VendedorController extends BaseController
 				'title' => 'Vendedores',
 				'subtitle' => 'Lista de vendedores'
 			];
-			return view('Admin\Comercial\Vendedores', $data);
+			return view('Admin/Comercial/vendedores', $data);
 		} 
 
 		return redirect()->route('login');

@@ -13,7 +13,7 @@ class ClienteController extends BaseController
 				'title' => 'Clientes',
 				'subtitle' => 'Lista de clientes'
 			];
-			return view('Admin\Comercial\Clientes', $data);
+			return view('Admin/Comercial/clientes', $data);
 		} 
 
 		return redirect()->route('login');

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -13,10 +15,14 @@ namespace CodeIgniter\Database\MySQLi;
 
 use CodeIgniter\Database\BaseResult;
 use CodeIgniter\Entity\Entity;
+use mysqli;
+use mysqli_result;
 use stdClass;
 
 /**
  * Result for MySQLi
+ *
+ * @extends BaseResult<mysqli, mysqli_result>
  */
 class Result extends BaseResult
 {
@@ -99,6 +105,8 @@ class Result extends BaseResult
 
     /**
      * Frees the current result.
+     *
+     * @return void
      */
     public function freeResult()
     {
@@ -113,7 +121,7 @@ class Result extends BaseResult
      * internally before fetching results to make sure the result set
      * starts at zero.
      *
-     * @return mixed
+     * @return bool
      */
     public function dataSeek(int $n = 0)
     {
@@ -125,7 +133,7 @@ class Result extends BaseResult
      *
      * Overridden by driver classes.
      *
-     * @return mixed
+     * @return array|false|null
      */
     protected function fetchAssoc()
     {
@@ -137,12 +145,12 @@ class Result extends BaseResult
      *
      * Overridden by child classes.
      *
-     * @return bool|Entity|object
+     * @return Entity|false|object|stdClass
      */
     protected function fetchObject(string $className = 'stdClass')
     {
         if (is_subclass_of($className, Entity::class)) {
-            return empty($data = $this->fetchAssoc()) ? false : (new $className())->setAttributes($data);
+            return empty($data = $this->fetchAssoc()) ? false : (new $className())->injectRawData($data);
         }
 
         return $this->resultID->fetch_object($className);

@@ -16,26 +16,13 @@ class CriarCategoria extends Migration
 				'unsigned'       => true,
 				'auto_increment' => true,
 			],
-			'produtoNome'       => [
+			'nome'     => [
 				'type'           => 'VARCHAR',
 				'constraint'     => '255'
 			],
-			'produtoTipo'       => [
-				'type'           => 'VARCHAR',
-				'constraint'     => '100'
-			],
-			'tamanho'       => [
-				'type'           => 'VARCHAR',
-				'constraint'     => '5'
-			],
-			'divisoria'       => [
-				'type'           => 'INT',
-				'constraint'     => 10,
-				'unsigned'       => true
-			],
-			'valor'       => [
-				'type'           => 'DECIMAL',
-				'constraint'     => 15.4
+			'ativo'       => [
+				'type' 			=> 'BOOLEAN',
+				'default' 		=> 1
 			],
 			'criado_em' => [
 				'type'           => 'DATETIME',
@@ -45,7 +32,7 @@ class CriarCategoria extends Migration
 				'type'           => 'DATETIME',
 				'null'           => true,
 			],
-			'excluido_en' => [
+			'excluido_em' => [
 				'type'           => 'DATETIME',
 				'null'           => true,
 			],

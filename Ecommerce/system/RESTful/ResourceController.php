@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,10 +14,12 @@
 namespace CodeIgniter\RESTful;
 
 use CodeIgniter\API\ResponseTrait;
-use CodeIgniter\HTTP\Response;
+use CodeIgniter\HTTP\ResponseInterface;
 
 /**
  * An extendable controller to provide a RESTful API for a resource.
+ *
+ * @see \CodeIgniter\RESTful\ResourceControllerTest
  */
 class ResourceController extends BaseResource
 {
@@ -24,7 +28,7 @@ class ResourceController extends BaseResource
     /**
      * Return an array of resource objects, themselves in array format
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function index()
     {
@@ -36,7 +40,7 @@ class ResourceController extends BaseResource
      *
      * @param int|string|null $id
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function show($id = null)
     {
@@ -46,7 +50,7 @@ class ResourceController extends BaseResource
     /**
      * Return a new resource object, with default properties
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function new()
     {
@@ -56,7 +60,7 @@ class ResourceController extends BaseResource
     /**
      * Create a new resource object, from "posted" parameters
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function create()
     {
@@ -68,7 +72,7 @@ class ResourceController extends BaseResource
      *
      * @param int|string|null $id
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function edit($id = null)
     {
@@ -78,9 +82,9 @@ class ResourceController extends BaseResource
     /**
      * Add or update a model resource, from "posted" properties
      *
-     * @param string|null|int$id
+     * @param int|string|null $id
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function update($id = null)
     {
@@ -92,7 +96,7 @@ class ResourceController extends BaseResource
      *
      * @param int|string|null $id
      *
-     * @return Response|string|void
+     * @return ResponseInterface|string|void
      */
     public function delete($id = null)
     {
@@ -101,6 +105,8 @@ class ResourceController extends BaseResource
 
     /**
      * Set/change the expected response representation for returned objects
+     *
+     * @param 'json'|'xml' $format Response format
      *
      * @return void
      */

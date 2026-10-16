@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -11,11 +13,8 @@
 
 namespace CodeIgniter\Debug\Toolbar\Collectors;
 
-use CodeIgniter\View\RendererInterface;
-use Config\Services;
-
 /**
- * Views collector
+ * Events collector
  */
 class Events extends BaseCollector
 {
@@ -25,7 +24,7 @@ class Events extends BaseCollector
      *
      * @var bool
      */
-    protected $hasTimeline = false;
+    protected $hasTimeline = true;
 
     /**
      * Whether this collector needs to display
@@ -52,21 +51,6 @@ class Events extends BaseCollector
     protected $title = 'Events';
 
     /**
-     * Instance of the Renderer service
-     *
-     * @var RendererInterface
-     */
-    protected $viewer;
-
-    /**
-     * Constructor.
-     */
-    public function __construct()
-    {
-        $this->viewer = Services::renderer();
-    }
-
-    /**
      * Child classes should implement this to return the timeline data
      * formatted for correct usage.
      */
@@ -74,12 +58,12 @@ class Events extends BaseCollector
     {
         $data = [];
 
-        $rows = $this->viewer->getPerformanceData();
+        $rows = \CodeIgniter\Events\Events::getPerformanceLogs();
 
         foreach ($rows as $info) {
             $data[] = [
-                'name'      => 'View: ' . $info['view'],
-                'component' => 'Views',
+                'name'      => 'Event: ' . $info['event'],
+                'component' => 'Events',
                 'start'     => $info['start'],
                 'duration'  => $info['end'] - $info['start'],
             ];

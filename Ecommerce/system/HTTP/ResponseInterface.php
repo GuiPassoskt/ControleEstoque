@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,10 +14,11 @@
 namespace CodeIgniter\HTTP;
 
 use CodeIgniter\Cookie\Cookie;
+use CodeIgniter\Cookie\CookieStore;
+use CodeIgniter\Exceptions\InvalidArgumentException;
 use CodeIgniter\HTTP\Exceptions\HTTPException;
 use CodeIgniter\Pager\PagerInterface;
 use DateTime;
-use InvalidArgumentException;
 
 /**
  * Representation of an outgoing, server-side response.
@@ -28,10 +31,8 @@ use InvalidArgumentException;
  * - Status code and reason phrase
  * - Headers
  * - Message body
- *
- * @mixin RedirectResponse
  */
-interface ResponseInterface
+interface ResponseInterface extends MessageInterface
 {
     /**
      * Constants for status codes.
@@ -111,8 +112,6 @@ interface ResponseInterface
      * to understand and satisfy the request.
      *
      * @return int Status code.
-     *
-     * @deprecated To be replaced by the PSR-7 version (compatible)
      */
     public function getStatusCode(): int;
 
@@ -130,21 +129,27 @@ interface ResponseInterface
      *                       provided status code; if none is provided, will
      *                       default to the IANA name.
      *
-     * @return self
+     * @return $this
      *
-     * @throws InvalidArgumentException For invalid status code arguments.
+     * @throws HTTPException For invalid status code arguments.
      */
     public function setStatusCode(int $code, string $reason = '');
 
     /**
-     * Gets the response response phrase associated with the status code.
+     * Gets the response reason phrase associated with the status code.
+     *
+     * Because a reason phrase is not a required element in a response
+     * status line, the reason phrase value MAY be null. Implementations MAY
+     * choose to return the default RFC 7231 recommended reason phrase (or those
+     * listed in the IANA HTTP Status Code Registry) for the response's
+     * status code.
      *
      * @see http://tools.ietf.org/html/rfc7231#section-6
      * @see http://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
      *
-     * @deprecated Use getReasonPhrase()
+     * @return string Reason phrase; must return an empty string if none present.
      */
-    public function getReason(): string;
+    public function getReasonPhrase();
 
     // --------------------------------------------------------------------
     // Convenience Methods
@@ -153,7 +158,7 @@ interface ResponseInterface
     /**
      * Sets the date header
      *
-     * @return ResponseInterface
+     * @return $this
      */
     public function setDate(DateTime $date);
 
@@ -164,6 +169,8 @@ interface ResponseInterface
      * preferably, an instance of DateTime.
      *
      * @param DateTime|string $date
+     *
+     * @return $this
      */
     public function setLastModified($date);
 
@@ -172,7 +179,7 @@ interface ResponseInterface
      *
      * @see http://tools.ietf.org/html/rfc5988
      *
-     * @return Response
+     * @return $this
      *
      * @todo Recommend moving to Pager
      */
@@ -182,7 +189,7 @@ interface ResponseInterface
      * Sets the Content Type header for this response with the mime type
      * and, optionally, the charset.
      *
-     * @return ResponseInterface
+     * @return $this
      */
     public function setContentType(string $mime, string $charset = 'UTF-8');
 
@@ -193,7 +200,7 @@ interface ResponseInterface
     /**
      * Converts the $body into JSON and sets the Content Type header.
      *
-     * @param array|string $body
+     * @param array|object|string $body
      *
      * @return $this
      */
@@ -202,7 +209,7 @@ interface ResponseInterface
     /**
      * Returns the current body, converted to JSON is it isn't already.
      *
-     * @return mixed|string
+     * @return bool|string|null
      *
      * @throws InvalidArgumentException If the body property is not array.
      */
@@ -220,7 +227,7 @@ interface ResponseInterface
     /**
      * Retrieves the current body into XML and returns it.
      *
-     * @return mixed|string
+     * @return bool|string|null
      *
      * @throws InvalidArgumentException If the body property is not array.
      */
@@ -235,6 +242,8 @@ interface ResponseInterface
     /**
      * Sets the appropriate headers to ensure this response
      * is not cached by the browsers.
+     *
+     * @return $this
      */
     public function noCache();
 
@@ -262,7 +271,7 @@ interface ResponseInterface
      *  - proxy-revalidate
      *  - no-transform
      *
-     * @return ResponseInterface
+     * @return $this
      */
     public function setCache(array $options = []);
 
@@ -273,21 +282,21 @@ interface ResponseInterface
     /**
      * Sends the output to the browser.
      *
-     * @return ResponseInterface
+     * @return $this
      */
     public function send();
 
     /**
      * Sends the headers of this HTTP request to the browser.
      *
-     * @return Response
+     * @return $this
      */
     public function sendHeaders();
 
     /**
      * Sends the Body of the message to the browser.
      *
-     * @return Response
+     * @return $this
      */
     public function sendBody();
 
@@ -301,28 +310,28 @@ interface ResponseInterface
      * Accepts an arbitrary number of binds (up to 7) or an associative
      * array in the first parameter containing all the values.
      *
-     * @param array|string $name     Cookie name or array containing binds
-     * @param string       $value    Cookie value
-     * @param string       $expire   Cookie expiration time in seconds
-     * @param string       $domain   Cookie domain (e.g.: '.yourdomain.com')
-     * @param string       $path     Cookie path (default: '/')
-     * @param string       $prefix   Cookie name prefix
-     * @param bool         $secure   Whether to only transfer cookies via SSL
-     * @param bool         $httponly Whether only make the cookie accessible via HTTP (no javascript)
-     * @param string|null  $samesite
+     * @param array|Cookie|string $name     Cookie name / array containing binds / Cookie object
+     * @param string              $value    Cookie value
+     * @param int                 $expire   Cookie expiration time in seconds
+     * @param string              $domain   Cookie domain (e.g.: '.yourdomain.com')
+     * @param string              $path     Cookie path (default: '/')
+     * @param string              $prefix   Cookie name prefix
+     * @param bool                $secure   Whether to only transfer cookies via SSL
+     * @param bool                $httponly Whether only make the cookie accessible via HTTP (no javascript)
+     * @param string|null         $samesite
      *
      * @return $this
      */
     public function setCookie(
         $name,
         $value = '',
-        $expire = '',
+        $expire = 0,
         $domain = '',
         $path = '/',
         $prefix = '',
         $secure = false,
         $httponly = false,
-        $samesite = null
+        $samesite = null,
     );
 
     /**
@@ -333,7 +342,7 @@ interface ResponseInterface
     /**
      * Returns the cookie
      *
-     * @return Cookie|Cookie[]|null
+     * @return array<string, Cookie>|Cookie|null
      */
     public function getCookie(?string $name = null, string $prefix = '');
 
@@ -347,9 +356,16 @@ interface ResponseInterface
     /**
      * Returns all cookies currently set.
      *
-     * @return Cookie[]
+     * @return array<string, Cookie>
      */
     public function getCookies();
+
+    /**
+     * Returns the `CookieStore` instance.
+     *
+     * @return CookieStore
+     */
+    public function getCookieStore();
 
     // --------------------------------------------------------------------
     // Response Methods
@@ -380,4 +396,13 @@ interface ResponseInterface
      * @return DownloadResponse|null
      */
     public function download(string $filename = '', $data = '', bool $setMime = false);
+
+    // --------------------------------------------------------------------
+    // CSP Methods
+    // --------------------------------------------------------------------
+
+    /**
+     * Get Content Security Policy handler.
+     */
+    public function getCSP(): ContentSecurityPolicy;
 }

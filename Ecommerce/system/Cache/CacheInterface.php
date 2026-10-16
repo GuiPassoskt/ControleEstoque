@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -11,13 +13,12 @@
 
 namespace CodeIgniter\Cache;
 
-/**
- * Cache interface
- */
 interface CacheInterface
 {
     /**
      * Takes care of any handler-specific setup that must be done.
+     *
+     * @return void
      */
     public function initialize();
 
@@ -56,7 +57,7 @@ interface CacheInterface
      * @param string $key    Cache ID
      * @param int    $offset Step/value to increase by
      *
-     * @return mixed
+     * @return bool|int
      */
     public function increment(string $key, int $offset = 1);
 
@@ -66,7 +67,7 @@ interface CacheInterface
      * @param string $key    Cache ID
      * @param int    $offset Step/value to increase by
      *
-     * @return mixed
+     * @return bool|int
      */
     public function decrement(string $key, int $offset = 1);
 
@@ -83,7 +84,7 @@ interface CacheInterface
      * The information returned and the structure of the data
      * varies depending on the handler.
      *
-     * @return mixed
+     * @return array<array-key, mixed>|false|object|null
      */
     public function getCacheInfo();
 
@@ -92,10 +93,9 @@ interface CacheInterface
      *
      * @param string $key Cache item name.
      *
-     * @return array|false|null
-     *                          Returns null if the item does not exist, otherwise array<string, mixed>
-     *                          with at least the 'expire' key for absolute epoch expiry (or null).
-     *                          Some handlers may return false when an item does not exist, which is deprecated.
+     * @return array<string, mixed>|false|null Returns null if the item does not exist, otherwise array<string, mixed>
+     *                                         with at least the 'expire' key for absolute epoch expiry (or null).
+     *                                         Some handlers may return false when an item does not exist, which is deprecated.
      */
     public function getMetaData(string $key);
 

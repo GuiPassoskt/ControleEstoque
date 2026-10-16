@@ -16,85 +16,59 @@ class CriarProduto extends Migration
 				'unsigned'       => true,
 				'auto_increment' => true,
 			],
-			'name'       => [
+			'nome'       => [
 				'type'           => 'VARCHAR',
 				'constraint'     => '255'
 			],
-			'slug'       => [
-				'type'           => 'VARCHAR',
-				'constraint'     => '255',
-				'null'           => true,
-			],
-			'sku'       => [
-				'type'           => 'VARCHAR',
-				'constraint'     => '255'
-			],
-			'price'       => [
-				'type'           => 'DECIMAL',
-				'null'           => true,
-			],
-			'description'       => [
+			'descricao'       => [
 				'type'           => 'TEXT',
 				'constraint'     => 15.4,
 				'null'           => true,
 			],
-			'state'       => [
-				'type'           => 'ENUM',
-				'constraint'     => ['draft', 'inactive', 'active', 'unavailable', 'retired'],
-                'default'        => 'active',
-			],
-			'meta_keywords'       => [
-				'type'           => 'TEXT',
-				'null'           => true,
-			],
-			'meta_description'  	 => [
-				'type'           => 'TEXT',
-				'null'           => true,
-			],
-			'unit_sold'  	 => [
+			'estoque'   => [
 				'type'           => 'INT',
 				'constraint'     => 10,
-				'unsigned'       => true,
+				'default'		 => 0,
 			],
-			'last_sale_at'  => [
-				'type'           => 'DATETIME',
-				'null'     		 => true
+			'sku'		=> [
+				'type' 			=> 'VARCHAR',
+				'constraint' 	=> 50
 			],
-			'stock'  	 => [
-				'type'           => 'DECIMAL',
-				'constraint'     => 15.4
+			'imagem'      => [
+				'type' 			=> 'VARCHAR',
+				'constraint' 	=> 255,
+				'null' 			=> true,
 			],
-			'category_id'          => [
+            'ativo'       => [
+				'type' 			=> 'BOOLEAN',
+				'default' 		=> 1
+			],
+			'categoria_id'          => [
 				'type'           => 'INT',
 				'constraint'     => 10,
 				'unsigned'       => true
 			],
-			'brand_id'          => [
-				'type'           => 'INT',
-				'constraint'     => 10,
-				'unsigned'       => true
-			],
-			'created_at' => [
+			'criado_em' => [
 				'type'           => 'DATETIME',
 				'null'           => true,
 			],
-			'updated_at' => [
+			'atualizado_em' => [
 				'type'           => 'DATETIME',
 				'null'           => true,
 			],
-			'deleted_at' => [
+			'excluido_em' => [
 				'type'           => 'DATETIME',
 				'null'           => true,
 			],
            
 		]);
 		$this->forge->addKey('id', true);
-		$this->forge->createTable('products');
+		$this->forge->createTable('produtos');
 		$this->db->enableForeignKeyChecks();
 	}
 
 	public function down()
 	{
-		$this->forge->dropTable('products');
+		$this->forge->dropTable('produtos');
 	}
 }

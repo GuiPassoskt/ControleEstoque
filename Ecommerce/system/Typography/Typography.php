@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -11,8 +13,12 @@
 
 namespace CodeIgniter\Typography;
 
+use Config\DocTypes;
+
 /**
  * Typography Class
+ *
+ * @see \CodeIgniter\Typography\TypographyTest
  */
 class Typography
 {
@@ -24,7 +30,7 @@ class Typography
     public $blockElements = 'address|blockquote|div|dl|fieldset|form|h\d|hr|noscript|object|ol|p|pre|script|table|ul';
 
     /**
-     * Elements that should not have <p> and <br /> tags within them.
+     * Elements that should not have <p> and <br> tags within them.
      *
      * @var string
      */
@@ -63,7 +69,7 @@ class Typography
      *
      * This function converts text, making it typographically correct:
      *     - Converts double spaces into paragraphs.
-     *     - Converts single line breaks into <br /> tags
+     *     - Converts single line breaks into <br> tags
      *     - Converts single and double quotes into correctly facing curly quote entities.
      *     - Converts three dots into ellipsis.
      *     - Converts double dashes into em-dashes.
@@ -78,7 +84,7 @@ class Typography
         }
 
         // Standardize Newlines to make matching easier
-        if (strpos($str, "\r") !== false) {
+        if (str_contains($str, "\r")) {
             $str = str_replace(["\r\n", "\r"], "\n", $str);
         }
 
@@ -90,7 +96,7 @@ class Typography
 
         // HTML comment tags don't conform to patterns of normal tags, so pull them out separately, only if needed
         $htmlComments = [];
-        if (strpos($str, '<!--') !== false && preg_match_all('#(<!\-\-.*?\-\->)#s', $str, $matches)) {
+        if (str_contains($str, '<!--') && preg_match_all('#(<!\-\-.*?\-\->)#s', $str, $matches) >= 1) {
             for ($i = 0, $total = count($matches[0]); $i < $total; $i++) {
                 $htmlComments[] = $matches[0][$i];
                 $str            = str_replace($matches[0][$i], '{@HC' . $i . '}', $str);
@@ -99,16 +105,16 @@ class Typography
 
         // match and yank <pre> tags if they exist.  It's cheaper to do this separately since most content will
         // not contain <pre> tags, and it keeps the PCRE patterns below simpler and faster
-        if (strpos($str, '<pre') !== false) {
-            $str = preg_replace_callback('#<pre.*?>.*?</pre>#si', [$this, 'protectCharacters'], $str);
+        if (str_contains($str, '<pre')) {
+            $str = preg_replace_callback('#<pre.*?>.*?</pre>#si', $this->protectCharacters(...), $str);
         }
 
         // Convert quotes within tags to temporary markers.
-        $str = preg_replace_callback('#<.+?>#si', [$this, 'protectCharacters'], $str);
+        $str = preg_replace_callback('#<.+?>#si', $this->protectCharacters(...), $str);
 
         // Do the same with braces if necessary
         if ($this->protectBracedQuotes === false) {
-            $str = preg_replace_callback('#\{.+?\}#si', [$this, 'protectCharacters'], $str);
+            $str = preg_replace_callback('#\{.+?\}#si', $this->protectCharacters(...), $str);
         }
 
         // Convert "ignore" tags to temporary marker.  The parser splits out the string at every tag
@@ -160,12 +166,12 @@ class Typography
                 $chunks[$i] .= "\n";
             }
 
-            // Convert Newlines into <p> and <br /> tags
+            // Convert Newlines into <p> and <br> tags
             $str .= $this->formatNewLines($chunks[$i]);
         }
 
         // No opening block level tag? Add it if needed.
-        if (! preg_match('/^\s*<(?:' . $this->blockElements . ')/i', $str)) {
+        if (preg_match('/^\s*<(?:' . $this->blockElements . ')/i', $str) !== 1) {
             $str = preg_replace('/^(.*?)<(' . $this->blockElements . ')/i', '<p>$1</p><$2', $str);
         }
 
@@ -208,7 +214,7 @@ class Typography
         ];
 
         // Do we need to reduce empty lines?
-        if ($reduceLinebreaks === true) {
+        if ($reduceLinebreaks) {
             $table['#<p>\n*</p>#'] = '';
         } else {
             // If we have empty paragraph tags we add a non-breaking space
@@ -275,19 +281,20 @@ class Typography
     /**
      * Format Newlines
      *
-     * Converts newline characters into either <p> tags or <br />
+     * Converts newline characters into either <p> tags or <br>
      */
     protected function formatNewLines(string $str): string
     {
-        if ($str === '' || (strpos($str, "\n") === false && ! in_array($this->lastBlockElement, $this->innerBlockRequired, true))) {
+        if ($str === '' || (! str_contains($str, "\n") && ! in_array($this->lastBlockElement, $this->innerBlockRequired, true))) {
             return $str;
         }
 
         // Convert two consecutive newlines to paragraphs
         $str = str_replace("\n\n", "</p>\n\n<p>", $str);
 
-        // Convert single spaces to <br /> tags
-        $str = preg_replace("/([^\n])(\n)([^\n])/", '\\1<br />\\2\\3', $str);
+        // Convert single spaces to <br> tags
+        $br  = '<br' . _solidus() . '>';
+        $str = preg_replace("/([^\n])(\n)([^\n])/", '\\1' . $br . '\\2\\3', $str);
 
         // Wrap the whole enchilada in enclosing paragraphs
         if ($str !== "\n") {
@@ -320,10 +327,12 @@ class Typography
      */
     public function nl2brExceptPre(string $str): string
     {
-        $newstr = '';
+        $newstr   = '';
+        $docTypes = new DocTypes();
 
         for ($ex = explode('pre>', $str), $ct = count($ex), $i = 0; $i < $ct; $i++) {
-            $newstr .= (($i % 2) === 0) ? nl2br($ex[$i]) : $ex[$i];
+            $xhtml = ! ($docTypes->html5 ?? false);
+            $newstr .= (($i % 2) === 0) ? nl2br($ex[$i], $xhtml) : $ex[$i];
 
             if ($ct - 1 !== $i) {
                 $newstr .= 'pre>';

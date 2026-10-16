@@ -29,6 +29,14 @@
             margin: auto;
         }
 
+        .form-signin form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
         .form-signin .checkbox {
             font-weight: 400;
         }
@@ -62,7 +70,8 @@
 <body class="text-center">
     <main class="form-signin">
         <form action="<?php echo base_url('auth/login/signIn') ?>" method="post">
-            <img class="mb-4" src="<?php echo base_url('assets/images/logo-decodezero.jpg') ?>" alt="" width="150" height="150">
+            <?php echo csrf_field() ?>
+            <img class="mb-4" src="<?php echo base_url('assets/images/logo-utopia.jpeg') ?>" alt="" width="150" height="150">
             <h1 class="h3 mb-3 fw-normal">Por favor, logue-se</h1>
             <label for="inputEmail" class="visually-hidden">Email</label>
             <input type="email" name="inputEmail" id="inputEmail" class="form-control" placeholder="Email address" required autofocus>

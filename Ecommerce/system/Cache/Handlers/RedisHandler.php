@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,19 +14,28 @@
 namespace CodeIgniter\Cache\Handlers;
 
 use CodeIgniter\Exceptions\CriticalError;
+use CodeIgniter\I18n\Time;
 use Config\Cache;
 use Redis;
 use RedisException;
 
 /**
  * Redis cache handler
+ *
+ * @see \CodeIgniter\Cache\Handlers\RedisHandlerTest
  */
 class RedisHandler extends BaseHandler
 {
     /**
      * Default config
      *
-     * @var array
+     * @var array{
+     *   host: string,
+     *   password: string|null,
+     *   port: int,
+     *   timeout: int,
+     *   database: int,
+     * }
      */
     protected $config = [
         'host'     => '127.0.0.1',
@@ -37,10 +48,13 @@ class RedisHandler extends BaseHandler
     /**
      * Redis connection
      *
-     * @var Redis
+     * @var Redis|null
      */
     protected $redis;
 
+    /**
+     * Note: Use `CacheFactory::getHandler()` to instantiate.
+     */
     public function __construct(Cache $config)
     {
         $this->prefix = $config->prefix;
@@ -100,28 +114,18 @@ class RedisHandler extends BaseHandler
     public function get(string $key)
     {
         $key  = static::validateKey($key, $this->prefix);
-        $data = $this->redis->hMGet($key, ['__ci_type', '__ci_value']);
+        $data = $this->redis->hMget($key, ['__ci_type', '__ci_value']);
 
         if (! isset($data['__ci_type'], $data['__ci_value']) || $data['__ci_value'] === false) {
             return null;
         }
 
-        switch ($data['__ci_type']) {
-            case 'array':
-            case 'object':
-                return unserialize($data['__ci_value']);
-
-            case 'boolean':
-            case 'integer':
-            case 'double': // Yes, 'double' is returned and NOT 'float'
-            case 'string':
-            case 'NULL':
-                return settype($data['__ci_value'], $data['__ci_type']) ? $data['__ci_value'] : null;
-
-            case 'resource':
-            default:
-                return null;
-        }
+        return match ($data['__ci_type']) {
+            'array', 'object' => unserialize($data['__ci_value']),
+            // Yes, 'double' is returned and NOT 'float'
+            'boolean', 'integer', 'double', 'string', 'NULL' => settype($data['__ci_value'], $data['__ci_type']) ? $data['__ci_value'] : null,
+            default => null,
+        };
     }
 
     /**
@@ -149,12 +153,12 @@ class RedisHandler extends BaseHandler
                 return false;
         }
 
-        if (! $this->redis->hMSet($key, ['__ci_type' => $dataType, '__ci_value' => $value])) {
+        if (! $this->redis->hMset($key, ['__ci_type' => $dataType, '__ci_value' => $value])) {
             return false;
         }
 
-        if ($ttl) {
-            $this->redis->expireAt($key, time() + $ttl);
+        if ($ttl !== 0) {
+            $this->redis->expireAt($key, Time::now()->getTimestamp() + $ttl);
         }
 
         return true;
@@ -172,21 +176,22 @@ class RedisHandler extends BaseHandler
 
     /**
      * {@inheritDoc}
+     *
+     * @return int
      */
     public function deleteMatching(string $pattern)
     {
+        /** @var list<string> $matchedKeys */
         $matchedKeys = [];
+        $pattern     = static::validateKey($pattern, $this->prefix);
         $iterator    = null;
 
         do {
-            // Scan for some keys
+            /** @var false|list<string> $keys */
             $keys = $this->redis->scan($iterator, $pattern);
 
-            // Redis may return empty results, so protect against that
-            if ($keys !== false) {
-                foreach ($keys as $key) {
-                    $matchedKeys[] = $key;
-                }
+            if (is_array($keys)) {
+                $matchedKeys = [...$matchedKeys, ...$keys];
             }
         } while ($iterator > 0);
 
@@ -232,15 +237,15 @@ class RedisHandler extends BaseHandler
      */
     public function getMetaData(string $key)
     {
-        $key   = static::validateKey($key, $this->prefix);
         $value = $this->get($key);
 
         if ($value !== null) {
-            $time = time();
-            $ttl  = $this->redis->ttl($key);
+            $time = Time::now()->getTimestamp();
+            $ttl  = $this->redis->ttl(static::validateKey($key, $this->prefix));
+            assert(is_int($ttl));
 
             return [
-                'expire' => $ttl > 0 ? time() + $ttl : null,
+                'expire' => $ttl > 0 ? $time + $ttl : null,
                 'mtime'  => $time,
                 'data'   => $value,
             ];

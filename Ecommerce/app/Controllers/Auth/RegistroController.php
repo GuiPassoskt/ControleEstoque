@@ -3,21 +3,21 @@
 namespace App\Controllers\Auth;
 
 use App\Controllers\BaseController;
-use App\Models\UserModel;
-use App\Entities\User;
+use App\Models\UsuarioModel;
+use App\Entities\Usuario;
 
 class RegistroController extends BaseController {
 
     public function index() {
-        return view('Auth\Register');
+        return view('Auth/register');
     }
 
     public function store() {
 
-        $userModel = new UserModel();
+        $userModel = new UsuarioModel();
         $userData = $this->request->getPost();
 
-        $user = new User();
+        $user = new Usuario();
         $user->fill($userData);
 
         if ($userModel->save($user)) {

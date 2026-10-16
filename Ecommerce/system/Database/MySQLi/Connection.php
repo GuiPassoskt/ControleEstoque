@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -13,14 +15,18 @@ namespace CodeIgniter\Database\MySQLi;
 
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\Exceptions\DatabaseException;
-use LogicException;
-use MySQLi;
+use CodeIgniter\Database\TableName;
+use CodeIgniter\Exceptions\LogicException;
+use mysqli;
+use mysqli_result;
 use mysqli_sql_exception;
 use stdClass;
 use Throwable;
 
 /**
  * Connection for MySQLi
+ *
+ * @extends BaseConnection<mysqli, mysqli_result>
  */
 class Connection extends BaseConnection
 {
@@ -52,9 +58,9 @@ class Connection extends BaseConnection
     /**
      * MySQLi object
      *
-     * Has to be preserved without being assigned to $conn_id.
+     * Has to be preserved without being assigned to $connId.
      *
-     * @var MySQLi
+     * @var false|mysqli
      */
     public $mysqli;
 
@@ -70,9 +76,26 @@ class Connection extends BaseConnection
     public $resultMode = MYSQLI_STORE_RESULT;
 
     /**
+     * Use MYSQLI_OPT_INT_AND_FLOAT_NATIVE
+     *
+     * @var bool
+     */
+    public $numberNative = false;
+
+    /**
+     * Use MYSQLI_CLIENT_FOUND_ROWS
+     *
+     * Whether affectedRows() should return number of rows found,
+     * or number of rows changed, after an UPDATE query.
+     *
+     * @var bool
+     */
+    public $foundRows = false;
+
+    /**
      * Connect to the database.
      *
-     * @return mixed
+     * @return false|mysqli
      *
      * @throws DatabaseException
      */
@@ -84,7 +107,7 @@ class Connection extends BaseConnection
             $port     = null;
             $socket   = $this->hostname;
         } else {
-            $hostname = ($persistent === true) ? 'p:' . $this->hostname : $this->hostname;
+            $hostname = $persistent ? 'p:' . $this->hostname : $this->hostname;
             $port     = empty($this->port) ? null : $this->port;
             $socket   = '';
         }
@@ -96,11 +119,15 @@ class Connection extends BaseConnection
 
         $this->mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
 
+        if ($this->numberNative === true) {
+            $this->mysqli->options(MYSQLI_OPT_INT_AND_FLOAT_NATIVE, 1);
+        }
+
         if (isset($this->strictOn)) {
             if ($this->strictOn) {
                 $this->mysqli->options(
                     MYSQLI_INIT_COMMAND,
-                    "SET SESSION sql_mode = CONCAT(@@sql_mode, ',', 'STRICT_ALL_TABLES')"
+                    "SET SESSION sql_mode = CONCAT(@@sql_mode, ',', 'STRICT_ALL_TABLES')",
                 );
             } else {
                 $this->mysqli->options(
@@ -112,7 +139,7 @@ class Connection extends BaseConnection
                                 'STRICT_ALL_TABLES', ''),
                             'STRICT_TRANS_TABLES,', ''),
                         ',STRICT_TRANS_TABLES', ''),
-                    'STRICT_TRANS_TABLES', '')"
+                    'STRICT_TRANS_TABLES', '')",
                 );
             }
         }
@@ -136,7 +163,7 @@ class Connection extends BaseConnection
                 $ssl['cipher'] = $this->encrypt['ssl_cipher'];
             }
 
-            if (! empty($ssl)) {
+            if ($ssl !== []) {
                 if (isset($this->encrypt['ssl_verify'])) {
                     if ($this->encrypt['ssl_verify']) {
                         if (defined('MYSQLI_OPT_SSL_VERIFY_SERVER_CERT')) {
@@ -159,11 +186,15 @@ class Connection extends BaseConnection
                     $ssl['cert'] ?? null,
                     $ssl['ca'] ?? null,
                     $ssl['capath'] ?? null,
-                    $ssl['cipher'] ?? null
+                    $ssl['cipher'] ?? null,
                 );
             }
 
             $clientFlags += MYSQLI_CLIENT_SSL;
+        }
+
+        if ($this->foundRows) {
+            $clientFlags += MYSQLI_CLIENT_FOUND_ROWS;
         }
 
         try {
@@ -174,10 +205,10 @@ class Connection extends BaseConnection
                 $this->database,
                 $port,
                 $socket,
-                $clientFlags
+                $clientFlags,
             )) {
                 // Prior to version 5.7.3, MySQL silently downgrades to an unencrypted connection if SSL setup fails
-                if (($clientFlags & MYSQLI_CLIENT_SSL) && version_compare($this->mysqli->client_info, 'mysqlnd 5.7.3', '<=')
+                if (($clientFlags & MYSQLI_CLIENT_SSL) !== 0 && version_compare($this->mysqli->client_info, 'mysqlnd 5.7.3', '<=')
                     && empty($this->mysqli->query("SHOW STATUS LIKE 'ssl_cipher'")->fetch_object()->Value)
                 ) {
                     $this->mysqli->close();
@@ -221,6 +252,8 @@ class Connection extends BaseConnection
     /**
      * Keep or establish the connection if no queries have been sent for
      * a length of time exceeding the server's idle timeout.
+     *
+     * @return void
      */
     public function reconnect()
     {
@@ -230,6 +263,8 @@ class Connection extends BaseConnection
 
     /**
      * Close the database connection.
+     *
+     * @return void
      */
     protected function _close()
     {
@@ -277,7 +312,7 @@ class Connection extends BaseConnection
     /**
      * Executes the query against the database.
      *
-     * @return bool|object
+     * @return false|mysqli_result
      */
     protected function execute(string $sql)
     {
@@ -294,7 +329,7 @@ class Connection extends BaseConnection
             log_message('error', (string) $e);
 
             if ($this->DBDebug) {
-                throw $e;
+                throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
             }
         }
 
@@ -341,9 +376,9 @@ class Connection extends BaseConnection
      * additional "ESCAPE x" parameter for specifying the escape character
      * in "LIKE" strings, and this handles those directly with a backslash.
      *
-     * @param string|string[] $str Input string
+     * @param list<string>|string $str Input string
      *
-     * @return string|string[]
+     * @return list<string>|string
      */
     public function escapeLikeStringDirect($str)
     {
@@ -360,8 +395,8 @@ class Connection extends BaseConnection
         // Escape LIKE condition wildcards
         return str_replace(
             [$this->likeEscapeChar, '%', '_'],
-            ['\\' . $this->likeEscapeChar, '\\' . '%', '\\' . '_'],
-            $str
+            ['\\' . $this->likeEscapeChar, '\\%', '\\_'],
+            $str,
         );
     }
 
@@ -373,13 +408,13 @@ class Connection extends BaseConnection
      */
     protected function _listTables(bool $prefixLimit = false, ?string $tableName = null): string
     {
-        $sql = 'SHOW TABLES FROM ' . $this->escapeIdentifiers($this->database);
+        $sql = 'SHOW TABLES FROM ' . $this->escapeIdentifier($this->database);
 
-        if ($tableName !== null) {
+        if ((string) $tableName !== '') {
             return $sql . ' LIKE ' . $this->escape($tableName);
         }
 
-        if ($prefixLimit !== false && $this->DBPrefix !== '') {
+        if ($prefixLimit && $this->DBPrefix !== '') {
             return $sql . " LIKE '" . $this->escapeLikeStringDirect($this->DBPrefix) . "%'";
         }
 
@@ -388,16 +423,25 @@ class Connection extends BaseConnection
 
     /**
      * Generates a platform-specific query string so that the column names can be fetched.
+     *
+     * @param string|TableName $table
      */
-    protected function _listColumns(string $table = ''): string
+    protected function _listColumns($table = ''): string
     {
-        return 'SHOW COLUMNS FROM ' . $this->protectIdentifiers($table, true, null, false);
+        $tableName = $this->protectIdentifiers(
+            $table,
+            true,
+            null,
+            false,
+        );
+
+        return 'SHOW COLUMNS FROM ' . $tableName;
     }
 
     /**
      * Returns an array of objects with field data
      *
-     * @return stdClass[]
+     * @return list<stdClass>
      *
      * @throws DatabaseException
      */
@@ -429,7 +473,7 @@ class Connection extends BaseConnection
     /**
      * Returns an array of objects with index data
      *
-     * @return stdClass[]
+     * @return array<string, stdClass>
      *
      * @throws DatabaseException
      * @throws LogicException
@@ -442,7 +486,9 @@ class Connection extends BaseConnection
             throw new DatabaseException(lang('Database.failGetIndexData'));
         }
 
-        if (! $indexes = $query->getResultArray()) {
+        $indexes = $query->getResultArray();
+
+        if ($indexes === []) {
             return [];
         }
 
@@ -475,50 +521,53 @@ class Connection extends BaseConnection
     /**
      * Returns an array of objects with Foreign key data
      *
-     * @return stdClass[]
+     * @return array<string, stdClass>
      *
      * @throws DatabaseException
      */
     protected function _foreignKeyData(string $table): array
     {
         $sql = '
-                    SELECT
-                        tc.CONSTRAINT_NAME,
-                        tc.TABLE_NAME,
-                        kcu.COLUMN_NAME,
-                        rc.REFERENCED_TABLE_NAME,
-                        kcu.REFERENCED_COLUMN_NAME
-                    FROM information_schema.TABLE_CONSTRAINTS AS tc
-                    INNER JOIN information_schema.REFERENTIAL_CONSTRAINTS AS rc
-                        ON tc.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
-                        AND tc.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
-                    INNER JOIN information_schema.KEY_COLUMN_USAGE AS kcu
-                        ON tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME
-                        AND tc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
-                    WHERE
-                        tc.CONSTRAINT_TYPE = ' . $this->escape('FOREIGN KEY') . ' AND
-                        tc.TABLE_SCHEMA = ' . $this->escape($this->database) . ' AND
-                        tc.TABLE_NAME = ' . $this->escape($table);
+                SELECT
+                    tc.CONSTRAINT_NAME,
+                    tc.TABLE_NAME,
+                    kcu.COLUMN_NAME,
+                    rc.REFERENCED_TABLE_NAME,
+                    kcu.REFERENCED_COLUMN_NAME,
+                    rc.DELETE_RULE,
+                    rc.UPDATE_RULE,
+                    rc.MATCH_OPTION
+                FROM information_schema.table_constraints AS tc
+                INNER JOIN information_schema.referential_constraints AS rc
+                    ON tc.constraint_name = rc.constraint_name
+                    AND tc.constraint_schema = rc.constraint_schema
+                INNER JOIN information_schema.key_column_usage AS kcu
+                    ON tc.constraint_name = kcu.constraint_name
+                    AND tc.constraint_schema = kcu.constraint_schema
+                WHERE
+                    tc.constraint_type = ' . $this->escape('FOREIGN KEY') . ' AND
+                    tc.table_schema = ' . $this->escape($this->database) . ' AND
+                    tc.table_name = ' . $this->escape($table);
 
         if (($query = $this->query($sql)) === false) {
             throw new DatabaseException(lang('Database.failGetForeignKeyData'));
         }
-        $query = $query->getResultObject();
 
-        $retVal = [];
+        $query   = $query->getResultObject();
+        $indexes = [];
 
         foreach ($query as $row) {
-            $obj                      = new stdClass();
-            $obj->constraint_name     = $row->CONSTRAINT_NAME;
-            $obj->table_name          = $row->TABLE_NAME;
-            $obj->column_name         = $row->COLUMN_NAME;
-            $obj->foreign_table_name  = $row->REFERENCED_TABLE_NAME;
-            $obj->foreign_column_name = $row->REFERENCED_COLUMN_NAME;
-
-            $retVal[] = $obj;
+            $indexes[$row->CONSTRAINT_NAME]['constraint_name']       = $row->CONSTRAINT_NAME;
+            $indexes[$row->CONSTRAINT_NAME]['table_name']            = $row->TABLE_NAME;
+            $indexes[$row->CONSTRAINT_NAME]['column_name'][]         = $row->COLUMN_NAME;
+            $indexes[$row->CONSTRAINT_NAME]['foreign_table_name']    = $row->REFERENCED_TABLE_NAME;
+            $indexes[$row->CONSTRAINT_NAME]['foreign_column_name'][] = $row->REFERENCED_COLUMN_NAME;
+            $indexes[$row->CONSTRAINT_NAME]['on_delete']             = $row->DELETE_RULE;
+            $indexes[$row->CONSTRAINT_NAME]['on_update']             = $row->UPDATE_RULE;
+            $indexes[$row->CONSTRAINT_NAME]['match']                 = $row->MATCH_OPTION;
         }
 
-        return $retVal;
+        return $this->foreignKeyDataToObjects($indexes);
     }
 
     /**

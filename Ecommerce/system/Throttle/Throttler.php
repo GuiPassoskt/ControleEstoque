@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * This file is part of CodeIgniter 4 framework.
  *
@@ -12,6 +14,7 @@
 namespace CodeIgniter\Throttle;
 
 use CodeIgniter\Cache\CacheInterface;
+use CodeIgniter\I18n\Time;
 
 /**
  * Class Throttler
@@ -99,8 +102,11 @@ class Throttler implements ThrottlerInterface
         // Number of seconds to get one token
         $refresh = 1 / $rate;
 
+        /** @var float|int|null $tokens */
+        $tokens = $this->cache->get($tokenName);
+
         // Check to see if the bucket has even been created yet.
-        if (($tokens = $this->cache->get($tokenName)) === null) {
+        if ($tokens === null) {
             // If it hasn't been created, then we'll set it to the maximum
             // capacity - 1, and save it to the cache.
             $tokens = $capacity - $cost;
@@ -121,12 +127,12 @@ class Throttler implements ThrottlerInterface
         // should be refilled, then checked against capacity
         // to be sure the bucket didn't overflow.
         $tokens += $rate * $elapsed;
-        $tokens = $tokens > $capacity ? $capacity : $tokens;
+        $tokens = min($tokens, $capacity);
 
         // If $tokens >= 1, then we are safe to perform the action, but
         // we need to decrement the number of available tokens.
         if ($tokens >= 1) {
-            $tokens = $tokens - $cost;
+            $tokens -= $cost;
             $this->cache->save($tokenName, $tokens, $seconds);
             $this->cache->save($tokenName . 'Time', $this->time(), $seconds);
 
@@ -138,7 +144,7 @@ class Throttler implements ThrottlerInterface
         // How many seconds till a new token is available.
         // We must have a minimum wait of 1 second for a new token.
         // Primarily stored to allow devs to report back to users.
-        $newTokenAvailable = (int) ($refresh - $elapsed - $refresh * $tokens);
+        $newTokenAvailable = (int) round((1 - $tokens) * $refresh);
         $this->tokenTime   = max(1, $newTokenAvailable);
 
         return false;
@@ -176,6 +182,6 @@ class Throttler implements ThrottlerInterface
      */
     public function time(): int
     {
-        return $this->testTime ?? time();
+        return $this->testTime ?? Time::now()->getTimestamp();
     }
 }

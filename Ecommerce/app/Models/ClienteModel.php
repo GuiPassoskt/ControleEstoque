@@ -18,13 +18,10 @@ class ClienteModel extends BaseModel
 		'nome',
 		'email',
 		'telefone',
-		'endereco',
-		'cidade',
-		'cep'
 	];
 
 	// Dates
-	protected $useTimestamps        = false;
+	protected $useTimestamps        = true;
 	protected $dateFormat           = 'datetime';
 	protected $createdField         = 'criado_em';
 	protected $updatedField         = 'atualizado_em';
@@ -46,4 +43,23 @@ class ClienteModel extends BaseModel
 	protected $afterFind            = [];
 	protected $beforeDelete         = [];
 	protected $afterDelete          = [];
+
+	/**
+	 * Localiza o cliente pelo e-mail ou cadastra; atualiza nome e telefone. Retorna o id.
+	 */
+	public function salvarPorEmail(array $dados): int
+	{
+		$cliente = $this->where('email', $dados['email'])->first();
+
+		if ($cliente) {
+			$this->update($cliente['id'], [
+				'nome'     => $dados['nome'],
+				'telefone' => $dados['telefone'],
+			]);
+
+			return (int) $cliente['id'];
+		}
+
+		return (int) $this->insert($dados);
+	}
 }

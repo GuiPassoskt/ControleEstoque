@@ -13,7 +13,7 @@ class DevolucaoController extends BaseController
 				'title' => 'Devoluções',
 				'subtitle' => 'Lista de devoluções'
 			];
-			return view('Admin\Venda\Devolucoes', $data);
+			return view('Admin/Venda/devolucoes', $data);
 		} 
 
 		return redirect()->route('login');

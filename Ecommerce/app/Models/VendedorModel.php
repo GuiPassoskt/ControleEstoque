@@ -15,12 +15,10 @@ class VendedorModel extends BaseModel
 	protected $useSoftDeletes       = false;
 	protected $protectFields        = true;
 	protected $allowedFields        = [
-		'firstname',
-		'lastname',
+		'nome',
 		'email',
-		'phone',
-		'is_active',
-		'last_purchase_at'
+		'telefone',
+		'ativo',
 	];
 
 	// Dates
